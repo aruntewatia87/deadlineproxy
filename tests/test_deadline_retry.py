@@ -78,8 +78,26 @@ def test_child_rejects_invalid_share() -> None:
 def test_with_timeout_never_extends() -> None:
     clock = FakeClock()
     deadline = Deadline.from_timeout(0.5, clock=clock)
-    narrowed = deadline.with_timeout(10.0)
+    narrowed = deadline.with_timeout(10.0, clock=clock)
     assert narrowed.remaining(clock=clock) == pytest.approx(0.5, abs=0.01)
+
+
+def test_with_timeout_can_shorten() -> None:
+    clock = FakeClock()
+    deadline = Deadline.from_timeout(10.0, clock=clock)
+    narrowed = deadline.with_timeout(0.25, clock=clock)
+    assert narrowed.remaining(clock=clock) == pytest.approx(0.25, abs=0.01)
+
+
+def test_with_timeout_uses_the_injected_clock() -> None:
+    """The narrowed deadline must be measured against the injected clock."""
+    clock = FakeClock()
+    deadline = Deadline.from_timeout(10.0, clock=clock)
+    clock.advance(5.0)
+    narrowed = deadline.with_timeout(2.0, clock=clock)
+    # Two seconds from the *current* time, not from the moment the
+    # deadline was created.
+    assert narrowed.remaining(clock=clock) == pytest.approx(2.0, abs=0.01)
 
 
 def test_at_creates_an_absolute_deadline() -> None:

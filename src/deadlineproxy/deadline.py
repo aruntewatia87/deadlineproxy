@@ -76,7 +76,7 @@ class Deadline:
         """Whether the deadline has already passed."""
         return self.remaining(clock=clock) <= 0.0
 
-    def with_timeout(self, seconds: float) -> Deadline:
+    def with_timeout(self, seconds: float, *, clock: object = time.monotonic) -> Deadline:
         """Return a deadline that is at most ``seconds`` from now.
 
         The result is the earlier of the current deadline and the new one, so
@@ -84,13 +84,14 @@ class Deadline:
 
         Args:
             seconds: The additional time budget.
+            clock: Monotonic clock callable, injectable for tests.
 
         Returns:
             The narrowed deadline.
         """
         if seconds < 0:
             raise ValueError(f"timeout must be non-negative, got {seconds}")
-        return Deadline(min(self._end, time.monotonic() + float(seconds)))
+        return Deadline(min(self._end, clock() + float(seconds)))  # type: ignore[operator]
 
     def child(self, share: float, *, clock: object = time.monotonic) -> Deadline:
         """Derive a sub-deadline for a nested operation.
